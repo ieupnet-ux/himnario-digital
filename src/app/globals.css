@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500;600;700&display=swap');
+
+:root {
+  color-scheme: light;
+}
+
+html.night-mode {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-cream text-navy-900 antialiased;
+}
+
+html.night-mode body {
+  @apply bg-navy-950 text-cream;
+}
+
+::selection {
+  @apply bg-gold-200 text-navy-900;
+}
+
+/* Scrollbar elegante */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-navy-200 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-navy-300;
+}
+
+.font-serif {
+  font-family: 'Lora', Georgia, serif;
+}

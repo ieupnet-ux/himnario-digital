@@ -1,0 +1,50 @@
+{
+  "name": "Himnario Digital - Iglesia Cristiana",
+  "short_name": "Himnario",
+  "description": "Biblioteca digital de himnos, coritos y alabanzas cristianas evangélicas",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d1730",
+  "theme_color": "#162548",
+  "orientation": "portrait-primary",
+  "lang": "es",
+  "categories": ["music", "lifestyle", "books"],
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Biblioteca",
+      "url": "/biblioteca",
+      "description": "Buscar himnos"
+    },
+    {
+      "name": "Favoritos",
+      "url": "/favoritos",
+      "description": "Ver mis himnos favoritos"
+    }
+  ]
+}

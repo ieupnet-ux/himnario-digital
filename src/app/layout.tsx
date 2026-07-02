@@ -1,3 +1,5 @@
+
+import './globals.css';
 import type { Viewport } from 'next';
 import { Toaster } from 'react-hot-toast';
 import { Header } from '@/components/layout/Header';

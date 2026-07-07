@@ -28,7 +28,7 @@ export function Header() {
             <span className="font-serif text-lg font-semibold text-navy-900 dark:text-cream">
               Himnario Digital
             </span>
-            <span className="text-[11px] text-navy-400 dark:text-navy-300">Iglesia Cristiana</span>
+            <span className="text-[11px] text-navy-400 dark:text-navy-300">Unión Pentecostal</span>
           </div>
         </Link>
 

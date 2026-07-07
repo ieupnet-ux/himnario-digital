@@ -1,18 +1,47 @@
-import { notFound } from 'next/navigation';
-import { getSongById, getCategories } from '@/lib/data/songs';
-import { SongForm } from '@/components/admin/SongForm';
+"use client";
 
-export const metadata = { title: 'Editar canción — Administración' };
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import SongForm, { type SongFormValues } from "@/components/admin/SongForm";
+import { getBrowserSupabase } from "@/lib/supabase";
 
-export default async function EditSongPage({ params }: { params: { id: string } }) {
-  const [song, categories] = await Promise.all([getSongById(params.id), getCategories()]);
-  if (!song) notFound();
+/** Edición de una canción existente. */
+export default function EditarCancionPage() {
+  const { id } = useParams<{ id: string }>();
+  const [initial, setInitial] = useState<SongFormValues | null>(null);
+  const [notFound, setNotFound] = useState(false);
+
+  useEffect(() => {
+    const sb = getBrowserSupabase();
+    if (!sb) return;
+    sb.from("songs").select("*").eq("id", id).maybeSingle().then(({ data }) => {
+      if (!data) { setNotFound(true); return; }
+      setInitial({
+        id: data.id,
+        number: data.number,
+        title: data.title,
+        slug: data.slug,
+        author_id: data.author_id ?? "",
+        category_id: data.category_id ?? "",
+        year: data.year ?? "",
+        key: data.key,
+        lyrics: data.lyrics,
+        notes: data.notes ?? "",
+        media_url: data.media_url ?? "",
+      });
+    });
+  }, [id]);
+
+  if (notFound) return <p className="p-6 text-navy-500">La canción no existe o fue eliminada.</p>;
+  if (!initial) return <p className="p-6 text-navy-500">Cargando canción…</p>;
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <h1 className="mb-1 font-serif text-2xl font-bold text-navy-900">Editar canción</h1>
-      <p className="mb-6 text-sm text-navy-500">{song.title}</p>
-      <SongForm categories={categories} initialSong={song} />
+    <div>
+      <h1 className="mb-1 font-serif text-2xl font-bold text-navy-900 dark:text-cream">
+        Editar canción
+      </h1>
+      <p className="mb-6 text-sm text-navy-500 dark:text-navy-300">{initial.title}</p>
+      <SongForm initial={initial} />
     </div>
   );
 }

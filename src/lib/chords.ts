@@ -81,3 +81,72 @@ export function stripChords(lyrics: string): string {
     .map((l) => (SECTION_RE.test(l) ? l : l.replace(CHORD_TOKEN, "")))
     .join("\n");
 }
+
+/* ============================================================
+ * Compatibilidad con LyricsViewer (versión anterior del visor)
+ * ============================================================ */
+
+/** Transpone un símbolo de acorde o tonalidad individual. */
+export function transposeChordSymbol(chord: string, semitones: number): string {
+  const preferFlats = FLAT_KEYS.has(chord);
+  return transposeChord(chord, semitones, preferFlats);
+}
+
+export interface ChordPosition {
+  chord: string;
+  /** Posición del acorde medida en caracteres del texto limpio. */
+  charIndex: number;
+}
+
+export interface ParsedChordLine {
+  cleanText: string;
+  chordPositions: ChordPosition[];
+}
+
+/**
+ * Analiza UNA línea con acordes entre corchetes y devuelve el texto limpio
+ * más la posición de cada acorde, para dibujarlos alineados encima.
+ */
+export function parseLineWithChords(line: string): ParsedChordLine {
+  // Las etiquetas de sección ([Coro], [Estrofa 1]…) no son acordes
+  if (SECTION_RE.test(line)) {
+    return { cleanText: line, chordPositions: [] };
+  }
+  const chordPositions: ChordPosition[] = [];
+  let cleanText = "";
+  let last = 0;
+  for (const m of line.matchAll(CHORD_TOKEN)) {
+    cleanText += line.slice(last, m.index);
+    chordPositions.push({ chord: m[1], charIndex: cleanText.length });
+    last = (m.index ?? 0) + m[0].length;
+  }
+  cleanText += line.slice(last);
+  return { cleanText, chordPositions };
+}
+
+/**
+ * Transpone la letra completa manteniendo el formato [Acorde] en línea.
+ * El tercer parámetro puede ser la tonalidad destino (string) para decidir
+ * si usar bemoles, o un booleano preferFlats directo.
+ */
+export function transposeLyricsWithChords(
+  lyrics: string,
+  semitones: number,
+  keyOrPreferFlats?: string | boolean
+): string {
+  if (semitones === 0) return lyrics;
+  const preferFlats =
+    typeof keyOrPreferFlats === "boolean"
+      ? keyOrPreferFlats
+      : keyOrPreferFlats
+        ? FLAT_KEYS.has(keyOrPreferFlats)
+        : false;
+  return lyrics
+    .split(/\r?\n/)
+    .map((l) =>
+      SECTION_RE.test(l)
+        ? l
+        : l.replace(CHORD_TOKEN, (_full, chord: string) => `[${transposeChord(chord, semitones, preferFlats)}]`)
+    )
+    .join("\n");
+}

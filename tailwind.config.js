@@ -22,6 +22,14 @@ module.exports = {
           600: "#a9853a",
         },
         marfil: "#fbfaf6",
+        gold: {
+         100: "#f5ead0",
+         400: "#d9bc66",
+         600: "#a9853a",
+         700: "#8a6c2e",
+         900: "#4d3b17",
+       },
+        cream: "#fbfaf6",
       },
       fontFamily: {
         display: ["'Cormorant Garamond'", "Georgia", "serif"],

@@ -1,112 +1,71 @@
-import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
-import Link from 'next/link';
-import { ChevronLeft, Calendar, User, Tag, Hash, Music2 } from 'lucide-react';
-import { getSongById, incrementSongUsage } from '@/lib/data/songs';
-import { FavoriteButton } from '@/components/songs/FavoriteButton';
-import { LyricsViewer } from '@/components/songs/LyricsViewer';
-import { SongToolbar } from '@/components/songs/SongToolbar';
-import { MediaPlayer } from '@/components/songs/MediaPlayer';
-import { RegisterRecentView } from '@/components/songs/RegisterRecentView';
-import { Badge } from '@/components/ui/Badge';
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import SongViewer from "@/components/SongViewer";
+import { getAllSongs, getSongBySlug } from "@/lib/data";
+import { stripChords } from "@/lib/chords";
 
-interface Props {
-  params: { id: string };
+export const revalidate = 300;
+
+/** Busca la canción por dirección amigable, número de himno o id. */
+async function findSong(param: string) {
+  const bySlug = await getSongBySlug(param);
+  if (bySlug) return bySlug;
+  const songs = await getAllSongs();
+  if (/^\d+$/.test(param)) {
+    const byNumber = songs.find((s) => s.number === Number(param));
+    if (byNumber) return byNumber;
+  }
+  return songs.find((s) => s.id === param) ?? null;
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const song = await getSongById(params.id);
-  if (!song) return { title: 'Himno no encontrado' };
+export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  const song = await findSong(params.id);
+  if (!song) return { title: "Canción no encontrada" };
+  const description = stripChords(song.lyrics).split("\n").filter(Boolean).slice(1, 4).join(" · ");
   return {
-    title: song.title,
-    description: `${song.title}${song.author?.name ? ` — ${song.author.name}` : ''}. Letra completa, acordes y tonalidad ${song.original_key}.`
+    title: `${song.number}. ${song.title}`,
+    description: `Himno ${song.number} — ${song.title} (${song.author}). ${description}`,
   };
 }
 
-export const revalidate = 30;
-
-export default async function CancionPage({ params }: Props) {
-  const song = await getSongById(params.id);
+export default async function CancionPage({ params }: { params: { id: string } }) {
+  const song = await findSong(params.id);
   if (!song) notFound();
 
-  // Incrementa el contador de uso de forma no bloqueante
-  incrementSongUsage(song.id).catch(() => {});
-
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
-      <RegisterRecentView songId={song.id} title={song.title} number={song.number} />
-
-      <Link
-        href="/biblioteca"
-        className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-navy-500 hover:text-navy-800"
-      >
-        <ChevronLeft className="h-4 w-4" /> Volver a la biblioteca
-      </Link>
-
-      {/* Encabezado de la canción */}
-      <div className="mb-6 rounded-2xl border border-navy-100 bg-white p-5 shadow-card sm:p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            {song.category && (
-              <Badge variant="gold" className="mb-2">
-                {song.category.name}
-              </Badge>
-            )}
-            <h1 className="font-serif text-2xl font-bold leading-tight text-navy-900 sm:text-3xl">
-              {song.title}
-            </h1>
+    <div className="mx-auto max-w-3xl px-4 py-8">
+      <header className="flex items-start gap-5">
+        <span className="medallon h-16 w-16 sm:h-20 sm:w-20 text-2xl sm:text-3xl shrink-0">{song.number}</span>
+        <div className="min-w-0">
+          <h1 className="font-display text-3xl sm:text-4xl font-semibold leading-tight">{song.title}</h1>
+          <p className="mt-1 text-navy-500 dark:text-navy-300">
+            {song.author}{song.year ? ` · ${song.year}` : ""}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold">
+            <span className="rounded-full bg-navy-900 text-oro-300 px-3 py-1">Tono original: {song.key}</span>
+            <span className="rounded-full bg-navy-50 dark:bg-navy-800 px-3 py-1">{song.category}</span>
           </div>
-          <FavoriteButton songId={song.id} size="lg" />
         </div>
+      </header>
 
-        <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-navy-500">
-          {song.number && (
-            <span className="flex items-center gap-1.5">
-              <Hash className="h-4 w-4 text-gold-500" /> Himno #{song.number}
-            </span>
-          )}
-          {song.author?.name && (
-            <span className="flex items-center gap-1.5">
-              <User className="h-4 w-4 text-gold-500" /> {song.author.name}
-            </span>
-          )}
-          {song.year && (
-            <span className="flex items-center gap-1.5">
-              <Calendar className="h-4 w-4 text-gold-500" /> {song.year}
-            </span>
-          )}
-          <span className="flex items-center gap-1.5">
-            <Music2 className="h-4 w-4 text-gold-500" /> Tono {song.original_key}
-          </span>
-          {song.tags && song.tags.length > 0 && (
-            <span className="flex items-center gap-1.5">
-              <Tag className="h-4 w-4 text-gold-500" /> {song.tags.join(', ')}
-            </span>
-          )}
-        </div>
-      </div>
-
-      <MediaPlayer audioUrl={song.audio_url} videoUrl={song.video_url} />
-
-      <div className="mb-4">
-        <SongToolbar songTitle={song.title} hasChords={Boolean(song.lyrics_with_chords)} />
-      </div>
-
-      {/* Letra y acordes */}
-      <div className="rounded-2xl border border-navy-100 bg-white p-5 shadow-card sm:p-8">
-        <LyricsViewer
-          lyricsWithChords={song.lyrics_with_chords}
-          plainLyrics={song.lyrics}
-          originalKey={song.original_key}
-        />
-      </div>
-
-      {song.sheet_music_notes && (
-        <div className="mt-6 rounded-2xl border border-navy-100 bg-white p-5 shadow-card sm:p-6">
-          <h2 className="mb-2 font-serif text-lg font-semibold text-navy-900">Notas musicales</h2>
-          <pre className="whitespace-pre-wrap font-mono text-sm text-navy-600">{song.sheet_music_notes}</pre>
-        </div>
+      {song.notes && (
+        <p className="mt-5 rounded-xl bg-oro-500/10 border border-oro-500/30 px-4 py-3 text-sm">
+          <strong className="text-oro-600 dark:text-oro-400">Notas musicales: </strong>{song.notes}
+        </p>
       )}
+
+      {song.media_url && (
+        <p className="mt-3 text-sm">
+          <a href={song.media_url} target="_blank" rel="noopener noreferrer"
+             className="font-semibold text-oro-600 dark:text-oro-400 hover:underline">
+            ▶ Escuchar audio / ver video de referencia
+          </a>
+        </p>
+      )}
+
+      <div className="mt-6">
+        <SongViewer song={song} />
+      </div>
     </div>
   );
 }

@@ -1,142 +1,91 @@
-import Link from 'next/link';
-import { Heart, Clock, Music, ArrowRight } from 'lucide-react';
-import { SearchBox } from '@/components/songs/SearchBox';
-import { SongCard } from '@/components/songs/SongCard';
-import { getSongs, getCategories } from '@/lib/data/songs';
-import * as Icons from 'lucide-react';
+import Link from "next/link";
+import Logo from "@/components/Logo";
+import HomeSearch from "@/components/HomeSearch";
+import FavoritesStrip from "@/components/FavoritesStrip";
+import SongCard from "@/components/SongCard";
+import { getAllSongs, getCategories, getPopularSongs, getRecentSongs } from "@/lib/data";
 
-export const revalidate = 60;
+export const revalidate = 300; // regenerar cada 5 minutos
 
 export default async function HomePage() {
-  const [recentSongs, popularSongs, categories] = await Promise.all([
-    getSongs({ limit: 6, orderBy: 'recent' }),
-    getSongs({ limit: 6, orderBy: 'popular' }),
-    getCategories()
+  const [songs, categories, recent, popular] = await Promise.all([
+    getAllSongs(),
+    getCategories(),
+    getRecentSongs(4),
+    getPopularSongs(4),
   ]);
 
   return (
     <div>
-      {/* HERO */}
-      <section className="relative overflow-hidden bg-navy-gradient">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-gold-400 blur-3xl" />
-          <div className="absolute -bottom-24 -left-24 h-96 w-96 rounded-full bg-gold-300 blur-3xl" />
-        </div>
-        <div className="relative mx-auto max-w-4xl px-4 py-20 text-center sm:px-6 sm:py-28 lg:px-8">
-          <span className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-4 py-1.5 text-xs font-medium text-gold-300">
-            <Music className="h-3.5 w-3.5" /> Biblioteca de alabanza
-          </span>
-          <h1 className="font-serif text-3xl font-bold text-white sm:text-5xl">
-            Himnos, coritos y alabanzas
-            <span className="block text-gold-400">al alcance de tu mano</span>
+      {/* Portada */}
+      <section className="bg-navy-900 text-marfil">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:py-20 text-center">
+          <Logo variant="white" size={96} className="h-24 w-24 mx-auto object-contain" />
+          <h1 className="mt-5 font-display text-4xl sm:text-5xl font-semibold tracking-wide">
+            Unión Pentecostal
           </h1>
-          <p className="mx-auto mt-4 max-w-xl text-sm text-navy-200 sm:text-base">
-            Consulta letras completas, acordes y tonalidades de todo nuestro himnario, desde tu
-            celular, tablet o computadora.
+          <p className="mt-1 text-sm uppercase tracking-[0.3em] text-oro-300 font-semibold">Himnario y cancionero</p>
+          <p className="mt-4 text-lg text-navy-100 max-w-2xl mx-auto">
+            Himnos, coritos y alabanzas de la iglesia Unión Pentecostal, con letra y acordes,
+            en tu celular, tablet o computadora.
           </p>
-
-          <div className="mx-auto mt-8 max-w-xl">
-            <SearchBox variant="hero" />
-          </div>
-
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href="/biblioteca"
-              className="inline-flex items-center gap-1.5 rounded-full bg-gold-gradient px-5 py-2.5 text-sm font-semibold text-navy-900 shadow-gold transition-transform hover:scale-105"
-            >
-              Ver toda la biblioteca <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              href="/favoritos"
-              className="inline-flex items-center gap-1.5 rounded-full border border-white/20 px-5 py-2.5 text-sm font-medium text-white hover:bg-white/10"
-            >
-              <Heart className="h-4 w-4" /> Mis favoritos
-            </Link>
-          </div>
+          <HomeSearch />
+          <p className="mt-4 text-sm text-navy-300">
+            Consejo: escribí solo el <span className="text-oro-300 font-semibold">número del himno</span> para ir directo.
+          </p>
         </div>
       </section>
 
-      {/* CATEGORÍAS */}
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="font-serif text-xl font-semibold text-navy-900 sm:text-2xl">
-            Explora por categoría
-          </h2>
-          <Link href="/categorias" className="text-sm font-medium text-gold-600 hover:text-gold-700">
-            Ver todas
-          </Link>
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {categories.slice(0, 8).map((category) => {
-            const IconComponent = (Icons as any)[category.icon ?? 'Music'] ?? Music;
-            return (
+      <div className="mx-auto max-w-6xl px-4">
+        {/* Acceso rápido a categorías */}
+        <section className="mt-10">
+          <h2 className="filete font-display text-2xl font-semibold">Categorías</h2>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {categories.map((c) => (
               <Link
-                key={category.id}
-                href={`/categorias/${category.slug}`}
-                className="group flex flex-col items-start gap-3 rounded-2xl border border-navy-100 bg-white p-4 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover"
+                key={c.slug}
+                href={`/categorias/${c.slug}`}
+                className="rounded-full border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 px-4 py-2 text-sm font-semibold hover:border-oro-500 hover:text-oro-600 dark:hover:text-oro-400 transition-colors"
               >
-                <span
-                  className="flex h-10 w-10 items-center justify-center rounded-xl text-white"
-                  style={{ backgroundColor: category.color ?? '#162548' }}
-                >
-                  <IconComponent className="h-5 w-5" />
-                </span>
-                <span className="font-serif text-sm font-semibold text-navy-900 group-hover:text-navy-700">
-                  {category.name}
-                </span>
+                {c.name}
               </Link>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* HIMNOS RECIENTES */}
-      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 font-serif text-xl font-semibold text-navy-900 sm:text-2xl">
-            <Clock className="h-5 w-5 text-gold-500" /> Agregados recientemente
-          </h2>
-          <Link href="/biblioteca" className="text-sm font-medium text-gold-600 hover:text-gold-700">
-            Ver todos
-          </Link>
-        </div>
-        {recentSongs.length > 0 ? (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {recentSongs.map((song) => (
-              <SongCard key={song.id} song={song} />
-            ))}
-          </div>
-        ) : (
-          <EmptyState />
-        )}
-      </section>
-
-      {/* MÁS UTILIZADOS */}
-      {popularSongs.length > 0 && (
-        <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="mb-6 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 font-serif text-xl font-semibold text-navy-900 sm:text-2xl">
-              <Music className="h-5 w-5 text-gold-500" /> Más utilizados
-            </h2>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {popularSongs.map((song) => (
-              <SongCard key={song.id} song={song} />
             ))}
           </div>
         </section>
-      )}
-    </div>
-  );
-}
 
-function EmptyState() {
-  return (
-    <div className="rounded-2xl border border-dashed border-navy-200 bg-navy-50/50 p-10 text-center">
-      <Music className="mx-auto mb-3 h-8 w-8 text-navy-300" />
-      <p className="text-sm text-navy-500">
-        Aún no hay himnos cargados. Ingresa al panel administrativo para agregar el primero.
-      </p>
+        {/* Recientes y más cantados */}
+        <section className="mt-10 grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div>
+            <h2 className="filete font-display text-2xl font-semibold">Himnos recientes</h2>
+            <div className="mt-4 grid gap-3">
+              {recent.map((s) => (
+                <SongCard key={s.id} song={s} />
+              ))}
+            </div>
+          </div>
+          <div>
+            <h2 className="filete font-display text-2xl font-semibold">Los más cantados</h2>
+            <div className="mt-4 grid gap-3">
+              {popular.map((s) => (
+                <SongCard key={s.id} song={s} />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Favoritos del dispositivo */}
+        <section className="mt-10">
+          <div className="flex items-baseline justify-between">
+            <h2 className="filete font-display text-2xl font-semibold">Tus favoritos</h2>
+            <Link href="/favoritos" className="text-sm font-semibold text-oro-600 dark:text-oro-400 hover:underline">
+              Ver todos →
+            </Link>
+          </div>
+          <div className="mt-4">
+            <FavoritesStrip songs={songs} mode="favoritos" />
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

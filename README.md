@@ -1,281 +1,138 @@
-# 📖 Himnario Digital
+# Himnario Digital · Iglesia Unión Pentecostal
 
-Plataforma web moderna de himnario y cancionero cristiano evangélico. Biblioteca digital de himnos, coritos y alabanzas con acordes, transposición automática, búsqueda instantánea y panel administrativo completo.
+Plataforma web de himnario y cancionero cristiano evangélico: biblioteca digital donde los miembros de la iglesia consultan himnos, coritos y alabanzas con letra, acordes, transposición de tonalidad, favoritos y modo sin conexión.
 
-**Stack:** Next.js 14 (App Router) + TypeScript + Tailwind CSS + Supabase (PostgreSQL + Auth) · PWA instalable · Listo para Vercel.
-
----
-
-## ✨ Funcionalidades
-
-- 🔍 **Búsqueda instantánea** por título, número, autor, tonalidad o temática
-- 🎸 **Acordes integrados** sobre la letra, con **transposición automática** (-6 a +6 semitonos)
-- 🌙 **Modo nocturno**, tamaño de fuente ajustable, modo ensayo, pantalla completa
-- ❤️ **Favoritos** (sincronizados en la nube si hay sesión, o locales si no)
-- 🕓 **Historial reciente** de himnos visitados
-- 🗂️ **12 categorías** predefinidas (Adoración, Alabanza, Evangelización, Santa Cena, Navidad, etc.)
-- 🔐 **Panel administrativo** con roles (admin / editor / miembro): CRUD de canciones, categorías y usuarios
-- 📥 **Importación masiva** desde Excel (.xlsx/.csv) y PDF
-- 📱 **PWA instalable** en Android/iOS, con caché offline de los himnos ya visitados
-- 🔎 **SEO**: metadatos dinámicos, sitemap.xml y robots.txt generados automáticamente
-- 🎨 Diseño elegante en **azul oscuro + blanco + dorado**, 100% responsive
+**Tecnologías:** Next.js 14 (App Router) · TypeScript · Tailwind CSS · Supabase (PostgreSQL) · PWA · Vercel.
 
 ---
 
-## 📁 Estructura del proyecto
+## Funciones
 
-```
-himnario-digital/
-├── src/
-│   ├── app/                      # Rutas (App Router de Next.js)
-│   │   ├── page.tsx               # Inicio
-│   │   ├── biblioteca/            # Biblioteca con filtros
-│   │   ├── categorias/[slug]/     # Categoría individual
-│   │   ├── cancion/[id]/          # Vista de canción
-│   │   ├── favoritos/             # Favoritos del usuario
-│   │   ├── historial/             # Historial reciente
-│   │   ├── login/                 # Login del panel admin
-│   │   ├── admin/                 # Panel administrativo (protegido)
-│   │   │   ├── canciones/         # CRUD de canciones
-│   │   │   ├── categorias/        # CRUD de categorías
-│   │   │   ├── usuarios/          # Gestión de roles
-│   │   │   └── importar/          # Importación masiva
-│   │   ├── api/                   # Rutas API REST
-│   │   │   ├── songs/             # CRUD de canciones vía API
-│   │   │   └── import/            # Endpoints de importación Excel/PDF
-│   │   ├── sitemap.ts / robots.ts # SEO
-│   │   └── offline/               # Fallback PWA sin conexión
-│   ├── components/
-│   │   ├── ui/                    # Button, Input, Card, Badge
-│   │   ├── layout/                # Header, Footer
-│   │   ├── songs/                 # SearchBox, LyricsViewer, SongCard, etc.
-│   │   └── admin/                 # Formularios y tablas del panel
-│   ├── lib/
-│   │   ├── chords.ts              # Motor de transposición de acordes
-│   │   ├── data/songs.ts          # Capa de acceso a datos (servidor)
-│   │   ├── store.ts               # Estado global (Zustand): preferencias, favoritos locales
-│   │   ├── auth.ts                # Helpers de autenticación/roles
-│   │   └── supabase/              # Clientes Supabase (browser, server, middleware)
-│   └── types/                     # Tipos TypeScript del dominio
-├── supabase/
-│   └── migrations/                 # Esquema SQL versionado
-│       ├── 0001_init_schema.sql    # Tablas, RLS, triggers, búsqueda full-text
-│       └── 0002_seed_categories.sql
-├── scripts/
-│   └── seed.ts                     # 20 himnos de demostración
-└── public/
-    ├── manifest.json                # Manifest PWA
-    └── icons/                       # Iconos PWA (192, 512, apple-touch)
-```
+| Para la congregación | Para músicos | Para administradores |
+|---|---|---|
+| Búsqueda por título, autor, temática, tonalidad y número | Acordes sobre la letra | Login seguro (Supabase Auth) |
+| Favoritos e historial reciente (por dispositivo) | Transposición ±1 a ±6 semitonos | Crear, editar y eliminar canciones |
+| Lectura nocturna | Cambio de tonalidad automático | Importación masiva desde Excel |
+| Tamaño de letra configurable | Modo ensayo (desplazamiento automático) | Importación desde PDF |
+| Himnos más utilizados y recientes | Pantalla completa | Gestión de categorías y usuarios |
+| PWA instalable, funciona sin conexión | | |
 
 ---
 
-## 🚀 Instalación local
+## 1. Instalación local
 
-### 1. Requisitos previos
-
-- Node.js 18.17 o superior
-- Una cuenta gratuita en [Supabase](https://supabase.com)
-- (Opcional) Cuenta en [Vercel](https://vercel.com) para el despliegue
-
-### 2. Clonar e instalar dependencias
+Requisitos: Node.js 18 o superior.
 
 ```bash
-cd himnario-digital
 npm install
-```
-
-### 3. Crear el proyecto en Supabase
-
-1. Entra a [supabase.com/dashboard](https://supabase.com/dashboard) y crea un nuevo proyecto.
-2. Ve a **SQL Editor** y ejecuta, en orden, el contenido de:
-   - `supabase/migrations/0001_init_schema.sql`
-   - `supabase/migrations/0002_seed_categories.sql`
-3. Ve a **Project Settings → API** y copia:
-   - `Project URL`
-   - `anon public` key
-   - `service_role` key (¡secreta, nunca la expongas en el cliente!)
-
-### 4. Configurar variables de entorno
-
-Copia `.env.example` a `.env.local` y completa los valores:
-
-```bash
-cp .env.example .env.local
-```
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-anon-key-publica
-SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key-secreta
-NEXT_PUBLIC_SITE_NAME="Himnario Digital"
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
-```
-
-### 5. Crear tu primer usuario administrador
-
-1. En Supabase, ve a **Authentication → Users → Add user** y crea un usuario con correo y contraseña.
-2. Al crearse, el trigger `handle_new_user` le asignará automáticamente el rol `member` en la tabla `profiles`.
-3. Para hacerlo administrador, ve a **Table Editor → profiles**, busca tu usuario y cambia la columna `role` a `admin`.
-
-### 6. Cargar los 20 himnos de demostración (opcional)
-
-```bash
-npm run seed
-```
-
-Esto usa la `service_role` key para insertar autores, y 20 himnos de ejemplo con acordes, listos para probar la transposición y la búsqueda.
-
-### 7. Levantar el entorno de desarrollo
-
-```bash
 npm run dev
 ```
 
-Abre [http://localhost:3000](http://localhost:3000). Para entrar al panel administrativo, ve a `/login` con el usuario que creaste en el paso 5.
+Abrí <http://localhost:3000>. **El sitio funciona de inmediato en modo demostración** con los 20 himnos de ejemplo, sin necesidad de configurar nada más.
 
----
+## 2. Conectar Supabase (contenido real)
 
-## ☁️ Despliegue en Vercel
+1. Creá un proyecto gratuito en [supabase.com](https://supabase.com).
+2. En **SQL Editor → New query**, pegá y ejecutá el contenido completo de [`supabase/schema.sql`](supabase/schema.sql). Esto crea las tablas (`songs`, `categories`, `authors`, `users`, `favorites`, `playlists`, `playlist_songs`), las políticas de seguridad (RLS) y carga los 20 himnos semilla.
+3. Copiá `.env.example` a `.env.local` y completá con los datos de **Project Settings → API**:
 
-### Opción A: desde la interfaz web
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=https://TU-PROYECTO.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=TU_CLAVE_ANON
+   ```
 
-1. Sube este proyecto a un repositorio de GitHub/GitLab/Bitbucket.
-2. Entra a [vercel.com/new](https://vercel.com/new) e importa el repositorio.
-3. En **Environment Variables**, agrega las mismas variables de `.env.local`:
+4. **Crear el primer administrador:**
+   - En Supabase: **Authentication → Users → Add user** (correo y contraseña).
+   - En SQL Editor: `update users set role = 'admin' where email = 'tu@correo.com';`
+5. Reiniciá el servidor. Entrá a `/admin` con ese correo y contraseña.
+
+> Seguridad: la lectura del himnario es pública; escribir (crear/editar/eliminar) solo lo permiten las políticas RLS a usuarios con rol `editor` o `admin`. La clave `anon` es segura de exponer.
+
+## 3. Despliegue en Vercel
+
+1. Subí el proyecto a un repositorio de GitHub.
+2. En [vercel.com](https://vercel.com): **Add New → Project → importá el repositorio** (Vercel detecta Next.js automáticamente).
+3. En **Environment Variables** agregá:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY`
-   - `NEXT_PUBLIC_SITE_NAME`
-   - `NEXT_PUBLIC_SITE_URL` → usa la URL final de Vercel (ej. `https://himnario-tuiglesia.vercel.app`)
-4. Haz clic en **Deploy**. Vercel detecta Next.js automáticamente, no requiere configuración adicional.
+   - `NEXT_PUBLIC_SITE_URL` → la URL final del sitio (por ejemplo `https://himnario-up.vercel.app`), usada por el SEO (sitemap, Open Graph).
+4. **Deploy.** Cada `git push` publica automáticamente.
 
-### Opción B: desde la CLI de Vercel
+## 4. Importación masiva desde Excel
 
-```bash
-npm install -g vercel
-vercel login
-vercel
-# sigue las instrucciones; luego para producción:
-vercel --prod
-```
-
-### Después del primer despliegue
-
-- En Supabase, ve a **Authentication → URL Configuration** y agrega la URL de Vercel a **Site URL** y **Redirect URLs** (necesario para que el login funcione correctamente en producción).
-- Verifica que `NEXT_PUBLIC_SITE_URL` en Vercel coincida con el dominio real, para que el `sitemap.xml` y los metadatos Open Graph sean correctos.
-
----
-
-## 🎸 Formato de acordes
-
-Los acordes se integran en la letra usando corchetes inmediatamente antes de la sílaba donde se tocan:
+En `/admin/importar`, subí un `.xlsx` o `.csv` con una fila por canción y estas columnas (en minúsculas):
 
 ```
-[G]Sublime gracia del [D]Señor
-que a un infeliz [G]salvó
+numero | titulo | autor | anio | categoria | tonalidad | letra | notas | media_url
 ```
 
-El motor de transposición (`src/lib/chords.ts`) soporta acordes simples (`G`), con séptima (`Am7`), disminuidos (`F#dim`), y acordes con bajo (`C/E`). Detecta automáticamente si la tonalidad de destino debe escribirse con sostenidos o bemoles.
+- `categoria` debe coincidir con el nombre de una categoría existente (ej.: `Adoración`).
+- Los acordes van entre corchetes dentro de la letra: `[G]Grande es tu [D]amor`.
+- Las secciones se marcan como `[Coro]`, `[Estrofa 1]`, `[Puente]`, etc.
+- Si el `numero` ya existe, la canción se **actualiza** (no se duplica).
 
----
+La importación desde **PDF** extrae el texto del archivo y lo pre-carga en el formulario de nueva canción para revisarlo y completar los datos.
 
-## 📥 Importación masiva
+## 5. Formato de letra con acordes
 
-### Desde Excel / CSV
+```
+[Estrofa 1]
+[G]Grande es tu amor por [C]mí, Señor,
+[G]más alto que el [D]cielo azul;
 
-Columnas esperadas (el orden no importa, los nombres no distinguen mayúsculas/acentos):
+[Coro]
+[C]Grande, [D]grande es tu [G]amor…
+```
 
-| Columna | Obligatorio | Descripción |
+El visor muestra los acordes **encima** de la sílaba correspondiente y los transpone automáticamente al cambiar de tono. Con los acordes ocultos, la congregación ve la letra limpia.
+
+## 6. Estructura del proyecto
+
+```
+├── public/                  Logos de la iglesia, íconos PWA, manifest.json, sw.js
+├── supabase/schema.sql      Esquema completo + RLS + 20 himnos semilla
+└── src/
+    ├── app/
+    │   ├── page.tsx              Inicio (logo, buscador, categorías, recientes, favoritos)
+    │   ├── biblioteca/           Búsqueda instantánea con filtros
+    │   ├── cancion/[slug]/       Vista de canción (SSG + SEO + JSON-LD)
+    │   ├── categorias/[slug]/    Navegación por temática
+    │   ├── favoritos/            Favoritos e historial del dispositivo
+    │   ├── admin/                Panel: resumen, canciones, importar, categorías, usuarios
+    │   ├── api/                  REST: /api/songs, /api/songs/[slug], /api/categories, /api/import/pdf
+    │   ├── sitemap.ts, robots.ts SEO
+    │   └── layout.tsx            Metadatos, PWA, fuentes, tema
+    ├── components/          Header, SongCard, SearchLibrary, SongViewer, admin/…
+    └── lib/
+        ├── config.ts        Nombre de la iglesia (editable en un solo lugar)
+        ├── chords.ts        Motor de acordes y transposición
+        ├── data.ts          Capa de datos (Supabase o modo demo)
+        ├── storage.ts       Favoritos, historial y preferencias locales
+        └── demo-songs.ts    20 himnos de demostración
+```
+
+## 7. Personalización
+
+- **Nombre de la iglesia:** editá `src/lib/config.ts`.
+- **Logos:** reemplazá `public/logo-white.png`, `logo-navy.png`, `logo-gold.png` y los íconos de `public/icons/`.
+- **Colores:** paleta en `tailwind.config.ts` (`navy`, `oro`, `marfil`).
+- **Versículo del pie de página:** en `src/lib/config.ts`.
+
+## 8. API REST
+
+| Método | Ruta | Descripción |
 |---|---|---|
-| `numero` | No | Número de himno |
-| `titulo` | **Sí** | Título de la canción |
-| `autor` | No | Nombre del autor (se crea automáticamente si no existe) |
-| `categoria` | No | Debe coincidir con el nombre exacto de una categoría existente |
-| `anio` | No | Año de composición |
-| `tonalidad` | No | Tonalidad original (ej. `C`, `Am`, `Bb`) |
-| `letra` | **Sí** | Letra completa en texto plano |
-| `letra_acordes` | No | Letra con acordes en formato `[G]texto` |
-| `tags` | No | Etiquetas separadas por coma |
+| GET | `/api/songs` | Lista de canciones. Filtros: `?q=`, `?category=`, `?key=` |
+| GET | `/api/songs/[slug]` | Detalle de una canción |
+| PATCH | `/api/songs/[slug]` | Suma una vista (ranking "más cantados") |
+| GET | `/api/categories` | Lista de categorías |
+| POST | `/api/import/pdf` | Extrae texto de un PDF (multipart, campo `file`) |
 
-### Desde PDF
+## 9. PWA y modo sin conexión
 
-El sistema extrae el texto del PDF y separa los himnos usando el delimitador `###` antes de cada título:
-
-```
-### Sublime Gracia
-Sublime gracia del Señor
-que a un infeliz salvó...
-
-### Cuán Grande Es Él
-Señor mi Dios, al contemplar los cielos...
-```
-
-Ambas opciones están disponibles en **Panel administrativo → Importar masivo**.
+En Android/Chrome aparece la opción **"Instalar aplicación"**. El service worker (`public/sw.js`) guarda en caché las páginas visitadas: los himnos que ya abriste quedan disponibles sin conexión. Los favoritos, el historial y las preferencias se guardan en el dispositivo y también funcionan offline.
 
 ---
 
-## 🔐 Roles de usuario
+*«Cantad alegres a Dios, habitantes de toda la tierra» — Salmo 100:1*
 
-| Rol | Permisos |
-|---|---|
-| `member` | Navegar, buscar, favoritos, historial (sin acceso al panel admin) |
-| `editor` | Todo lo anterior + crear/editar/eliminar canciones y categorías |
-| `admin` | Todo lo anterior + gestionar usuarios y sus roles |
-
-Los roles se gestionan desde **Panel administrativo → Usuarios** (solo visible para administradores).
-
----
-
-## 🗄️ Esquema de base de datos
-
-| Tabla | Descripción |
-|---|---|
-| `profiles` | Usuarios extendidos (vinculados a `auth.users`), con rol |
-| `authors` | Autores/compositores de los himnos |
-| `categories` | Categorías temáticas |
-| `songs` | Canciones: letra, acordes, tonalidad, audio/video, etc. |
-| `favorites` | Relación usuario ↔ canción favorita |
-| `playlists` / `playlist_songs` | Listas de alabanza personalizables |
-| `recent_history` | Historial de canciones visitadas por usuario |
-
-Todas las tablas tienen **Row Level Security (RLS)** habilitado: lectura pública para el contenido del himnario, escritura restringida a `admin`/`editor`, y datos personales (favoritos, historial) visibles solo para su dueño.
-
----
-
-## 🛠️ Scripts disponibles
-
-```bash
-npm run dev      # Entorno de desarrollo (http://localhost:3000)
-npm run build    # Build de producción
-npm run start    # Servidor de producción (tras build)
-npm run lint     # Linter de Next.js/ESLint
-npm run seed     # Carga los 20 himnos de demostración
-```
-
----
-
-## 📱 PWA (instalación en celular)
-
-1. Abre el sitio desplegado desde Chrome en Android (o Safari en iOS).
-2. Toca el menú **⋮ → Agregar a pantalla de inicio** (Android) o **Compartir → Agregar a inicio** (iOS).
-3. La app se instala con su propio ícono y abre en modo standalone, sin barra de navegador.
-4. Los himnos visitados quedan disponibles sin conexión gracias al `service worker`.
-
----
-
-## 🤝 Soporte y personalización
-
-- **Cambiar el logo**: reemplaza el ícono en `src/components/layout/Header.tsx` (actualmente usa el ícono `BookOpen` de `lucide-react`; puedes sustituirlo por una imagen con `next/image`).
-- **Cambiar colores**: edita la paleta `navy`/`gold` en `tailwind.config.js`.
-- **Agregar campos a las canciones**: agrega la columna en `supabase/migrations/`, actualiza `src/types/index.ts` y `src/types/database.ts`, y el formulario en `src/components/admin/SongForm.tsx`.
-
----
-
-## 📄 Licencia
-
-Proyecto entregado para uso interno de la congregación. Personaliza libremente según las necesidades de tu iglesia.
-
----
-
-*Hecho con dedicación para la gloria de Dios. 🙏*

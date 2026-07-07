@@ -2,43 +2,49 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500;600;700&display=swap');
-
 :root {
   color-scheme: light;
 }
-
-html.night-mode {
+.dark {
   color-scheme: dark;
 }
 
 body {
-  @apply bg-cream text-navy-900 antialiased;
+  @apply bg-marfil text-navy-900 font-body antialiased;
+}
+.dark body {
+  @apply bg-navy-950 text-navy-50;
 }
 
-html.night-mode body {
-  @apply bg-navy-950 text-cream;
+/* Filete dorado decorativo bajo títulos de sección */
+.filete::after {
+  content: "";
+  display: block;
+  width: 3.5rem;
+  height: 2px;
+  margin-top: 0.5rem;
+  background: linear-gradient(90deg, theme("colors.oro.500"), transparent);
 }
 
-::selection {
-  @apply bg-gold-200 text-navy-900;
+/* Medallón del número de himno (firma visual del sitio) */
+.medallon {
+  @apply inline-flex items-center justify-center rounded-full font-display font-semibold
+    text-oro-600 dark:text-oro-400 border-2 border-oro-500/70 bg-oro-500/5;
 }
 
-/* Scrollbar elegante */
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+/* Utilidades de accesibilidad */
+:focus-visible {
+  outline: 2px solid theme("colors.oro.500");
+  outline-offset: 2px;
 }
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  @apply bg-navy-200 rounded-full;
-}
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-navy-300;
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
-.font-serif {
-  font-family: 'Lora', Georgia, serif;
+/* Impresión: solo la letra */
+@media print {
+  header, footer, .no-print { display: none !important; }
 }

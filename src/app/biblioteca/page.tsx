@@ -1,34 +1,24 @@
-import type { Metadata } from 'next';
-import { Suspense } from 'react';
-import { getSongs, getCategories, getAuthors } from '@/lib/data/songs';
-import { LibraryClient } from '@/components/songs/LibraryClient';
+import SearchLibrary from "@/components/SearchLibrary";
+import { getAllSongs, getCategories } from "@/lib/data";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: 'Biblioteca de himnos',
-  description: 'Busca y consulta todos los himnos, coritos y alabanzas por título, autor, temática, tonalidad o número.'
+  title: "Biblioteca de canciones",
+  description: "Buscá himnos y alabanzas por título, autor, temática, tonalidad o número.",
 };
-
-export const revalidate = 60;
+export const revalidate = 300;
 
 export default async function BibliotecaPage() {
-  const [songs, categories, authors] = await Promise.all([
-    getSongs({ orderBy: 'title', limit: 200 }),
-    getCategories(),
-    getAuthors()
-  ]);
-
+  const [songs, categories] = await Promise.all([getAllSongs(), getCategories()]);
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-6">
-        <h1 className="font-serif text-2xl font-bold text-navy-900 sm:text-3xl">Biblioteca de Himnos</h1>
-        <p className="mt-1 text-sm text-navy-500">
-          Encuentra cualquier himno por título, número, autor, temática o tonalidad.
-        </p>
+    <div className="mx-auto max-w-6xl px-4 py-8">
+      <h1 className="filete font-display text-3xl font-semibold">Biblioteca de canciones</h1>
+      <p className="mt-2 text-navy-500 dark:text-navy-300">
+        Búsqueda instantánea por título, autor, temática, tonalidad o número de himno.
+      </p>
+      <div className="mt-6">
+        <SearchLibrary songs={songs} categories={categories} />
       </div>
-
-      <Suspense fallback={<div className="text-sm text-navy-400">Cargando…</div>}>
-        <LibraryClient initialSongs={songs} categories={categories} authors={authors} />
-      </Suspense>
     </div>
   );
 }

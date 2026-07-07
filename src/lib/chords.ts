@@ -1,159 +1,83 @@
 /**
- * lib/chords.ts
- * Motor de parsing y transposición de acordes musicales.
- *
- * Formato de entrada esperado en `lyrics_with_chords`:
- *   "[G]Sublime gracia [D]del Se[G]ñor"
- * Los acordes van entre corchetes inmediatamente antes de la sílaba/letra
- * sobre la que se tocan.
+ * Motor de acordes.
+ * La letra se guarda en formato ChordPro simplificado: los acordes van
+ * entre corchetes dentro del texto → "[G]Grande es tu [D]fidelidad".
  */
 
-const NOTES_SHARP = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-const NOTES_FLAT = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+const SHARPS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const FLATS = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+const FLAT_KEYS = new Set(["F", "Bb", "Eb", "Ab", "Db", "Gb", "Dm", "Gm", "Cm", "Fm", "Bbm"]);
 
-// Tonalidades que tradicionalmente se escriben con bemoles
-const FLAT_KEYS = new Set(['F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb', 'Cb', 'Dm', 'Gm', 'Cm', 'Fm', 'Bbm', 'Ebm']);
+export const ALL_KEYS = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
 
-export const ALL_KEYS = [
-  'C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F', 'F#', 'Gb', 'G', 'G#', 'Ab', 'A', 'A#', 'Bb', 'B',
-  'Cm', 'C#m', 'Dm', 'D#m', 'Ebm', 'Em', 'Fm', 'F#m', 'Gm', 'G#m', 'Abm', 'Am', 'A#m', 'Bbm', 'Bm'
-];
-
-interface ParsedChord {
-  root: string;
-  rootIndex: number;
-  suffix: string; // m, 7, maj7, sus4, dim, aug, etc.
-  bass?: string; // para acordes con bajo distinto, ej. C/E
+function noteIndex(note: string): number {
+  const i = SHARPS.indexOf(note);
+  return i >= 0 ? i : FLATS.indexOf(note);
 }
 
-/**
- * Parsea un símbolo de acorde como "G", "Am7", "F#dim", "C/E"
- */
-export function parseChord(chord: string): ParsedChord | null {
-  const match = chord.trim().match(/^([A-G])(#|b)?([^/]*)(?:\/([A-G])(#|b)?)?$/);
-  if (!match) return null;
-
-  const [, letter, accidental, suffix, bassLetter, bassAccidental] = match;
-  const rootName = letter + (accidental ?? '');
-  const rootIndex = noteNameToIndex(rootName);
-  if (rootIndex === -1) return null;
-
-  let bass: string | undefined;
-  if (bassLetter) {
-    bass = bassLetter + (bassAccidental ?? '');
-  }
-
-  return { root: rootName, rootIndex, suffix: suffix ?? '', bass };
+/** Transpone una nota raíz n semitonos. */
+function transposeNote(note: string, semitones: number, preferFlats: boolean): string {
+  const i = noteIndex(note);
+  if (i < 0) return note;
+  const j = (((i + semitones) % 12) + 12) % 12;
+  return preferFlats ? FLATS[j] : SHARPS[j];
 }
 
-function noteNameToIndex(name: string): number {
-  const sharpIdx = NOTES_SHARP.indexOf(name);
-  if (sharpIdx !== -1) return sharpIdx;
-  return NOTES_FLAT.indexOf(name);
+/** Transpone un acorde completo (ej: "F#m7/C#") n semitonos. */
+export function transposeChord(chord: string, semitones: number, preferFlats = false): string {
+  if (semitones === 0) return chord;
+  return chord.replace(/([A-G][b#]?)/g, (m) => transposeNote(m, semitones, preferFlats));
 }
 
-function indexToNoteName(index: number, preferFlat: boolean): string {
-  const normalized = ((index % 12) + 12) % 12;
-  return preferFlat ? NOTES_FLAT[normalized] : NOTES_SHARP[normalized];
+/** Transpone la tonalidad de la canción (puede ser menor, ej. "Em"). */
+export function transposeKey(key: string, semitones: number): string {
+  const m = key.match(/^([A-G][b#]?)(m?)/);
+  if (!m) return key;
+  const preferFlats = FLAT_KEYS.has(key);
+  return transposeNote(m[1], semitones, preferFlats) + (m[2] || "");
 }
 
-/**
- * Transpone un único símbolo de acorde N semitonos.
- */
-export function transposeChordSymbol(chord: string, semitones: number, targetKey?: string): string {
-  const parsed = parseChord(chord);
-  if (!parsed) return chord;
+export interface LyricSegment {
+  chord: string | null;
+  text: string;
+}
+export interface LyricLine {
+  /** true si la línea es una etiqueta de sección: [Coro], [Estrofa 1]… */
+  isSection: boolean;
+  segments: LyricSegment[];
+  raw: string;
+}
 
-  const preferFlat = targetKey ? FLAT_KEYS.has(targetKey) : FLAT_KEYS.has(parsed.root);
-  const newRootIndex = parsed.rootIndex + semitones;
-  const newRoot = indexToNoteName(newRootIndex, preferFlat);
+const SECTION_RE = /^\s*\[(coro|estrofa|verso|puente|final|intro|pre-?coro)[^\]]*\]\s*$/i;
+const CHORD_TOKEN = /\[([A-G][b#]?[^\]\s]*)\]/g;
 
-  let result = newRoot + parsed.suffix;
-
-  if (parsed.bass) {
-    const bassIndex = noteNameToIndex(parsed.bass);
-    if (bassIndex !== -1) {
-      const newBass = indexToNoteName(bassIndex + semitones, preferFlat);
-      result += '/' + newBass;
+/** Convierte la letra cruda en líneas con segmentos {acorde, texto}. */
+export function parseLyrics(lyrics: string, semitones = 0): LyricLine[] {
+  const preferFlats = false;
+  return lyrics.split(/\r?\n/).map((raw) => {
+    if (SECTION_RE.test(raw)) {
+      return { isSection: true, raw, segments: [{ chord: null, text: raw.replace(/[\[\]]/g, "") }] };
     }
-  }
-
-  return result;
-}
-
-/**
- * Transpone TODO el texto con acordes embebidos en formato [Acorde].
- */
-export function transposeLyricsWithChords(text: string, semitones: number, targetKey?: string): string {
-  if (!text || semitones === 0) return text;
-  return text.replace(/\[([^\]]+)\]/g, (_match, chordSymbol) => {
-    return `[${transposeChordSymbol(chordSymbol, semitones, targetKey)}]`;
+    const segments: LyricSegment[] = [];
+    let last = 0;
+    let pendingChord: string | null = null;
+    for (const m of raw.matchAll(CHORD_TOKEN)) {
+      const text = raw.slice(last, m.index);
+      if (text || pendingChord !== null) segments.push({ chord: pendingChord, text });
+      pendingChord = transposeChord(m[1], semitones, preferFlats);
+      last = (m.index ?? 0) + m[0].length;
+    }
+    const tail = raw.slice(last);
+    if (tail || pendingChord !== null) segments.push({ chord: pendingChord, text: tail });
+    if (segments.length === 0) segments.push({ chord: null, text: "" });
+    return { isSection: false, segments, raw };
   });
 }
 
-/**
- * Calcula la diferencia en semitonos (0-11, ascendente) entre dos tonalidades.
- */
-export function semitonesBetweenKeys(fromKey: string, toKey: string): number {
-  const fromParsed = parseChord(fromKey);
-  const toParsed = parseChord(toKey);
-  if (!fromParsed || !toParsed) return 0;
-  return ((toParsed.rootIndex - fromParsed.rootIndex) % 12 + 12) % 12;
-}
-
-export interface RenderedLine {
-  type: 'lyrics-with-chords' | 'plain';
-  chordPositions?: { chord: string; charIndex: number }[];
-  cleanText: string;
-}
-
-/**
- * Parsea una línea con acordes embebidos [X] y devuelve la posición de cada
- * acorde respecto al texto limpio (sin corchetes), para poder renderizar
- * los acordes alineados arriba de la letra.
- */
-export function parseLineWithChords(line: string): RenderedLine {
-  const chordPositions: { chord: string; charIndex: number }[] = [];
-  let cleanText = '';
-  let i = 0;
-
-  while (i < line.length) {
-    if (line[i] === '[') {
-      const closeIdx = line.indexOf(']', i);
-      if (closeIdx !== -1) {
-        const chord = line.slice(i + 1, closeIdx);
-        chordPositions.push({ chord, charIndex: cleanText.length });
-        i = closeIdx + 1;
-        continue;
-      }
-    }
-    cleanText += line[i];
-    i += 1;
-  }
-
-  return {
-    type: chordPositions.length > 0 ? 'lyrics-with-chords' : 'plain',
-    chordPositions,
-    cleanText
-  };
-}
-
-/** Extrae solo el texto plano (sin acordes) de un bloque con [Acordes]. */
-export function stripChords(text: string): string {
-  return text.replace(/\[([^\]]+)\]/g, '');
-}
-
-/** Lista única de acordes utilizados en una canción, en orden de aparición. */
-export function extractUniqueChords(text: string): string[] {
-  const matches = text.match(/\[([^\]]+)\]/g) ?? [];
-  const seen = new Set<string>();
-  const result: string[] = [];
-  for (const m of matches) {
-    const chord = m.slice(1, -1);
-    if (!seen.has(chord)) {
-      seen.add(chord);
-      result.push(chord);
-    }
-  }
-  return result;
+/** Quita todos los acordes de la letra (vista congregación). */
+export function stripChords(lyrics: string): string {
+  return lyrics
+    .split(/\r?\n/)
+    .map((l) => (SECTION_RE.test(l) ? l : l.replace(CHORD_TOKEN, "")))
+    .join("\n");
 }

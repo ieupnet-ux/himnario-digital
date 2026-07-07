@@ -1,16 +1,29 @@
-import { getCategories } from '@/lib/data/songs';
-import { SongForm } from '@/components/admin/SongForm';
+"use client";
 
-export const metadata = { title: 'Nueva canción — Administración' };
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
+import SongForm from "@/components/admin/SongForm";
 
-export default async function NewSongPage() {
-  const categories = await getCategories();
+function NuevaCancionInner() {
+  // La importación desde PDF puede pre-cargar la letra por parámetro de sesión
+  const params = useSearchParams();
+  const fromImport = params.get("import") === "pdf";
+  const prefill = fromImport && typeof window !== "undefined"
+    ? window.sessionStorage.getItem("himnario:pdf-import") ?? ""
+    : "";
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <h1 className="mb-1 font-serif text-2xl font-bold text-navy-900">Nueva canción</h1>
-      <p className="mb-6 text-sm text-navy-500">Completa los datos del himno o corito.</p>
-      <SongForm categories={categories} />
+    <div>
+      <h2 className="filete font-display text-2xl font-semibold mb-6">Nueva canción</h2>
+      <SongForm prefillLyrics={prefill} />
     </div>
+  );
+}
+
+export default function NuevaCancionPage() {
+  return (
+    <Suspense fallback={null}>
+      <NuevaCancionInner />
+    </Suspense>
   );
 }

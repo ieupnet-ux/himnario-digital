@@ -1,13 +1,11 @@
-import { requireAdminOrEditor } from '@/lib/auth';
-import { AdminSidebar } from '@/components/admin/AdminSidebar';
+import type { Metadata } from "next";
+import AdminGuard from "@/components/admin/AdminGuard";
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const profile = await requireAdminOrEditor();
+export const metadata: Metadata = {
+  title: "Panel administrativo",
+  robots: { index: false, follow: false },
+};
 
-  return (
-    <div className="flex min-h-screen flex-col md:flex-row">
-      <AdminSidebar profile={profile} />
-      <main className="flex-1 bg-cream p-4 sm:p-6 lg:p-8">{children}</main>
-    </div>
-  );
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return <AdminGuard>{children}</AdminGuard>;
 }

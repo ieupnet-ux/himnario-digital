@@ -21,6 +21,7 @@ export default function SongViewer({ song }: { song: Song }) {
   const [rehearsal, setRehearsal] = useState(false);
   const [shared, setShared] = useState(false);
   const [notation, setNotation] = useState<Notation>("american");
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollTimer = useRef<number | null>(null);
 
@@ -40,6 +41,13 @@ export default function SongViewer({ song }: { song: Song }) {
     fetch(`/api/songs/${song.slug}`, { method: "PATCH" }).catch(() => {});
   }, [song.slug, song.title, song.number]);
 
+  // Detecta cuándo el visor entra o sale de pantalla completa
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(document.fullscreenElement === containerRef.current);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
   function persist(next: Partial<{ showChords: boolean; fontSize: number }>) {
     const prefs = getPrefs();
     savePrefs({ ...prefs, ...next });
@@ -54,20 +62,24 @@ export default function SongViewer({ song }: { song: Song }) {
     }
   }
 
-  // Modo ensayo: desplazamiento automático suave
+  // Modo ensayo: desplazamiento automático suave.
+  // En pantalla completa se desplaza el contenedor; fuera de ella, la ventana.
   useEffect(() => {
-    if (!rehearsal) {
-      if (scrollTimer.current) window.clearInterval(scrollTimer.current);
-      return;
-    }
+    if (!rehearsal) return;
     scrollTimer.current = window.setInterval(() => {
-      window.scrollBy({ top: 1, behavior: "auto" });
-      if (window.innerHeight + window.scrollY >= document.body.scrollHeight - 4) setRehearsal(false);
+      const el = containerRef.current;
+      if (isFullscreen && el) {
+        el.scrollBy({ top: 1, behavior: "auto" });
+        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 4) setRehearsal(false);
+      } else {
+        window.scrollBy({ top: 1, behavior: "auto" });
+        if (window.innerHeight + window.scrollY >= document.body.scrollHeight - 4) setRehearsal(false);
+      }
     }, 60);
     return () => {
       if (scrollTimer.current) window.clearInterval(scrollTimer.current);
     };
-  }, [rehearsal]);
+  }, [rehearsal, isFullscreen]);
 
   async function share() {
     const url = window.location.href;
@@ -99,16 +111,29 @@ export default function SongViewer({ song }: { song: Song }) {
   const btnActive = "border-oro-500 text-oro-600 dark:text-oro-400 bg-oro-500/10";
 
   return (
-    <div ref={containerRef} className="bg-marfil dark:bg-navy-950 rounded-2xl">
+    <div
+      ref={containerRef}
+      className={
+        isFullscreen
+          ? "bg-marfil dark:bg-navy-950 h-screen overflow-y-auto px-4 sm:px-10 py-4"
+          : "bg-marfil dark:bg-navy-950 rounded-2xl"
+      }
+    >
       {/* Barra de herramientas */}
-      <div className="no-print sticky top-16 z-30 -mx-1 rounded-xl bg-white/95 dark:bg-navy-900/95 backdrop-blur border border-navy-100 dark:border-navy-800 p-3 shadow-card flex flex-wrap items-center gap-2">
+      <div
+        className={`no-print sticky ${
+          isFullscreen ? "top-0" : "top-16"
+        } z-30 -mx-1 rounded-xl bg-white/95 dark:bg-navy-900/95 backdrop-blur border border-navy-100 dark:border-navy-800 p-3 shadow-card flex flex-wrap items-center gap-2`}
+      >
         <button onClick={() => setFav(toggleFavorite(song.slug))} className={`${btn} ${fav ? btnActive : ""}`} aria-pressed={fav}>
           {fav ? "★ En favoritos" : "☆ Favorito"}
         </button>
         <button onClick={share} className={btn}>
           {shared ? "Enlace copiado ✓" : "Compartir"}
         </button>
-        <button onClick={fullscreen} className={btn}>Pantalla completa</button>
+        <button onClick={fullscreen} className={btn}>
+          {isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+        </button>
         <button onClick={() => setRehearsal(!rehearsal)} className={`${btn} ${rehearsal ? btnActive : ""}`} aria-pressed={rehearsal}>
           {rehearsal ? "■ Detener ensayo" : "▶ Modo ensayo"}
         </button>

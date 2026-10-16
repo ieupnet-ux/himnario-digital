@@ -2,6 +2,8 @@
  * Motor de acordes.
  * La letra se guarda en formato ChordPro simplificado: los acordes van
  * entre corchetes dentro del texto → "[G]Grande es tu [D]fidelidad".
+ * Siempre se almacenan en cifrado americano; la notación latina (Do Re Mi)
+ * es solo de visualización.
  */
 
 const SHARPS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
@@ -36,6 +38,36 @@ export function transposeKey(key: string, semitones: number): string {
   const preferFlats = FLAT_KEYS.has(key);
   return transposeNote(m[1], semitones, preferFlats) + (m[2] || "");
 }
+
+/* ============================================================
+ * Notación: americano (C D E…) ↔ latino (Do Re Mi…)
+ * ============================================================ */
+
+export type Notation = "american" | "latin";
+
+const LATIN_NAMES: Record<string, string> = {
+  C: "Do",
+  D: "Re",
+  E: "Mi",
+  F: "Fa",
+  G: "Sol",
+  A: "La",
+  B: "Si",
+};
+
+/**
+ * Convierte un acorde o tonalidad escrito en cifrado americano al sistema
+ * elegido. Mantiene sostenidos, bemoles, sufijos y bajos:
+ *   "Em7/B" → "Mim7/Si"   ·   "Bb" → "Sib"   ·   "F#m" → "Fa#m"
+ */
+export function toNotation(chord: string, notation: Notation): string {
+  if (notation === "american") return chord;
+  return chord.replace(/([A-G])([#b]?)/g, (_m, note: string, acc: string) => LATIN_NAMES[note] + acc);
+}
+
+/* ============================================================
+ * Análisis de letras
+ * ============================================================ */
 
 export interface LyricSegment {
   chord: string | null;

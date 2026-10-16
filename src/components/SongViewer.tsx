@@ -1,15 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { parseLyrics, transposeKey } from "@/lib/chords";
+import { parseLyrics, toNotation, transposeKey, type Notation } from "@/lib/chords";
 import { getPrefs, isFavorite, pushHistory, savePrefs, toggleFavorite } from "@/lib/storage";
 import type { Song } from "@/lib/types";
+
+const NOTATION_KEY = "himnario:notacion";
 
 /**
  * Visor de canción.
  * — Congregación: letra limpia, tamaño de fuente configurable, favoritos.
- * — Músicos: acordes sobre la letra, transposición ±semitonos, modo ensayo
- *   (desplazamiento automático) y pantalla completa.
+ * — Músicos: acordes sobre la letra, notación americana o latina,
+ *   transposición ±semitonos, modo ensayo y pantalla completa.
  */
 export default function SongViewer({ song }: { song: Song }) {
   const [showChords, setShowChords] = useState(false);
@@ -18,6 +20,7 @@ export default function SongViewer({ song }: { song: Song }) {
   const [fav, setFav] = useState(false);
   const [rehearsal, setRehearsal] = useState(false);
   const [shared, setShared] = useState(false);
+  const [notation, setNotation] = useState<Notation>("american");
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollTimer = useRef<number | null>(null);
 
@@ -27,6 +30,12 @@ export default function SongViewer({ song }: { song: Song }) {
     setShowChords(prefs.showChords);
     setFontSize(prefs.fontSize);
     setFav(isFavorite(song.slug));
+    try {
+      const saved = window.localStorage.getItem(NOTATION_KEY);
+      if (saved === "latin" || saved === "american") setNotation(saved);
+    } catch {
+      /* almacenamiento no disponible */
+    }
     pushHistory({ slug: song.slug, title: song.title, number: song.number });
     fetch(`/api/songs/${song.slug}`, { method: "PATCH" }).catch(() => {});
   }, [song.slug, song.title, song.number]);
@@ -34,6 +43,15 @@ export default function SongViewer({ song }: { song: Song }) {
   function persist(next: Partial<{ showChords: boolean; fontSize: number }>) {
     const prefs = getPrefs();
     savePrefs({ ...prefs, ...next });
+  }
+
+  function changeNotation(next: Notation) {
+    setNotation(next);
+    try {
+      window.localStorage.setItem(NOTATION_KEY, next);
+    } catch {
+      /* almacenamiento no disponible */
+    }
   }
 
   // Modo ensayo: desplazamiento automático suave
@@ -74,7 +92,7 @@ export default function SongViewer({ song }: { song: Song }) {
   }
 
   const lines = parseLyrics(song.lyrics, showChords ? semitones : 0);
-  const currentKey = transposeKey(song.key, semitones);
+  const currentKey = toNotation(transposeKey(song.key, semitones), notation);
 
   const btn =
     "rounded-lg border border-navy-200 dark:border-navy-700 px-3 py-2 text-sm font-semibold hover:border-oro-500 hover:text-oro-600 dark:hover:text-oro-400 transition-colors";
@@ -121,17 +139,38 @@ export default function SongViewer({ song }: { song: Song }) {
         </button>
 
         {showChords && (
-          <div className="flex items-center gap-1" role="group" aria-label="Transponer tonalidad">
-            <button onClick={() => setSemitones((s) => Math.max(-6, s - 1))} className={btn} aria-label="Bajar un semitono">−1</button>
-            <span className="rounded-lg bg-navy-900 text-oro-300 px-3 py-2 text-sm font-bold min-w-[4.5rem] text-center">
-              Tono {currentKey}
-              {semitones !== 0 && <span className="ml-1 text-navy-100 font-normal">({semitones > 0 ? "+" : ""}{semitones})</span>}
-            </span>
-            <button onClick={() => setSemitones((s) => Math.min(6, s + 1))} className={btn} aria-label="Subir un semitono">+1</button>
-            {semitones !== 0 && (
-              <button onClick={() => setSemitones(0)} className={btn} aria-label="Volver al tono original">Original</button>
-            )}
-          </div>
+          <>
+            {/* Notación: americano (C D E) o latino (Do Re Mi) */}
+            <div className="flex items-center gap-1" role="group" aria-label="Notación de acordes">
+              <button
+                onClick={() => changeNotation("american")}
+                className={`${btn} ${notation === "american" ? btnActive : ""}`}
+                aria-pressed={notation === "american"}
+              >
+                C D E
+              </button>
+              <button
+                onClick={() => changeNotation("latin")}
+                className={`${btn} ${notation === "latin" ? btnActive : ""}`}
+                aria-pressed={notation === "latin"}
+              >
+                Do Re Mi
+              </button>
+            </div>
+
+            {/* Transposición */}
+            <div className="flex items-center gap-1" role="group" aria-label="Transponer tonalidad">
+              <button onClick={() => setSemitones((s) => Math.max(-6, s - 1))} className={btn} aria-label="Bajar un semitono">−1</button>
+              <span className="rounded-lg bg-navy-900 text-oro-300 px-3 py-2 text-sm font-bold min-w-[4.5rem] text-center">
+                Tono {currentKey}
+                {semitones !== 0 && <span className="ml-1 text-navy-100 font-normal">({semitones > 0 ? "+" : ""}{semitones})</span>}
+              </span>
+              <button onClick={() => setSemitones((s) => Math.min(6, s + 1))} className={btn} aria-label="Subir un semitono">+1</button>
+              {semitones !== 0 && (
+                <button onClick={() => setSemitones(0)} className={btn} aria-label="Volver al tono original">Original</button>
+              )}
+            </div>
+          </>
         )}
       </div>
 
@@ -152,7 +191,7 @@ export default function SongViewer({ song }: { song: Song }) {
                 showChords && seg.chord ? (
                   <span key={j} className="inline-block align-bottom whitespace-pre">
                     <span className="block text-[0.78em] font-bold leading-none mb-0.5 text-navy-500 dark:text-oro-300">
-                      {seg.chord}
+                      {toNotation(seg.chord, notation)}
                     </span>
                     <span>{seg.text || "\u00A0"}</span>
                   </span>

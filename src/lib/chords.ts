@@ -2,8 +2,10 @@
  * Motor de acordes.
  * La letra se guarda en formato ChordPro simplificado: los acordes van
  * entre corchetes dentro del texto → "[G]Grande es tu [D]fidelidad".
- * Siempre se almacenan en cifrado americano; la notación latina (Do Re Mi)
- * es solo de visualización.
+ *
+ * Al ESCRIBIR se aceptan ambos sistemas: americano ([G], [Em], [Bb]) y
+ * latino ([Sol], [Mim], [Sib]). Internamente todo se trata como americano;
+ * la notación latina en pantalla es solo de visualización.
  */
 
 const SHARPS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
@@ -55,6 +57,16 @@ const LATIN_NAMES: Record<string, string> = {
   B: "Si",
 };
 
+const LATIN_TO_AMERICAN: Record<string, string> = {
+  do: "C",
+  re: "D",
+  mi: "E",
+  fa: "F",
+  sol: "G",
+  la: "A",
+  si: "B",
+};
+
 /**
  * Convierte un acorde o tonalidad escrito en cifrado americano al sistema
  * elegido. Mantiene sostenidos, bemoles, sufijos y bajos:
@@ -63,6 +75,18 @@ const LATIN_NAMES: Record<string, string> = {
 export function toNotation(chord: string, notation: Notation): string {
   if (notation === "american") return chord;
   return chord.replace(/([A-G])([#b]?)/g, (_m, note: string, acc: string) => LATIN_NAMES[note] + acc);
+}
+
+/**
+ * Convierte un acorde escrito en notación latina a americano.
+ * Si ya está en americano, lo deja igual:
+ *   "Mim/Si" → "Em/B"   ·   "Sib" → "Bb"   ·   "Sol7" → "G7"   ·   "Fadd9" → "Fadd9"
+ */
+export function toAmericanNotation(chord: string): string {
+  return chord.replace(
+    /(^|\/)(sol|do|re|mi|fa(?!dd)|la|si)/gi,
+    (_m, sep: string, name: string) => sep + LATIN_TO_AMERICAN[name.toLowerCase()]
+  );
 }
 
 /* ============================================================
@@ -81,7 +105,9 @@ export interface LyricLine {
 }
 
 const SECTION_RE = /^\s*\[(coro|estrofa|verso|puente|final|intro|pre-?coro)[^\]]*\]\s*$/i;
-const CHORD_TOKEN = /\[([A-G][b#]?[^\]\s]*)\]/g;
+
+/** Acorde entre corchetes: americano ([G], [Em7]) o latino ([Sol], [Mim7], [Sib]). */
+const CHORD_TOKEN = /\[((?:[A-G]|[Dd]o|[Rr]e|[Mm]i|[Ff]a|[Ss]ol|[Ll]a|[Ss]i)[b#]?[^\]\s]*)\]/g;
 
 /** Convierte la letra cruda en líneas con segmentos {acorde, texto}. */
 export function parseLyrics(lyrics: string, semitones = 0): LyricLine[] {
@@ -96,7 +122,7 @@ export function parseLyrics(lyrics: string, semitones = 0): LyricLine[] {
     for (const m of raw.matchAll(CHORD_TOKEN)) {
       const text = raw.slice(last, m.index);
       if (text || pendingChord !== null) segments.push({ chord: pendingChord, text });
-      pendingChord = transposeChord(m[1], semitones, preferFlats);
+      pendingChord = transposeChord(toAmericanNotation(m[1]), semitones, preferFlats);
       last = (m.index ?? 0) + m[0].length;
     }
     const tail = raw.slice(last);
@@ -114,14 +140,30 @@ export function stripChords(lyrics: string): string {
     .join("\n");
 }
 
+/**
+ * Normaliza una letra: todos los acordes escritos en latino pasan a americano.
+ * Útil para guardar siempre un formato único en la base de datos.
+ */
+export function normalizeLyricsToAmerican(lyrics: string): string {
+  return lyrics
+    .split(/\r?\n/)
+    .map((l) =>
+      SECTION_RE.test(l)
+        ? l
+        : l.replace(CHORD_TOKEN, (_full, chord: string) => `[${toAmericanNotation(chord)}]`)
+    )
+    .join("\n");
+}
+
 /* ============================================================
  * Compatibilidad con LyricsViewer (versión anterior del visor)
  * ============================================================ */
 
 /** Transpone un símbolo de acorde o tonalidad individual. */
 export function transposeChordSymbol(chord: string, semitones: number): string {
-  const preferFlats = FLAT_KEYS.has(chord);
-  return transposeChord(chord, semitones, preferFlats);
+  const american = toAmericanNotation(chord);
+  const preferFlats = FLAT_KEYS.has(american);
+  return transposeChord(american, semitones, preferFlats);
 }
 
 export interface ChordPosition {
@@ -149,7 +191,7 @@ export function parseLineWithChords(line: string): ParsedChordLine {
   let last = 0;
   for (const m of line.matchAll(CHORD_TOKEN)) {
     cleanText += line.slice(last, m.index);
-    chordPositions.push({ chord: m[1], charIndex: cleanText.length });
+    chordPositions.push({ chord: toAmericanNotation(m[1]), charIndex: cleanText.length });
     last = (m.index ?? 0) + m[0].length;
   }
   cleanText += line.slice(last);
@@ -178,7 +220,10 @@ export function transposeLyricsWithChords(
     .map((l) =>
       SECTION_RE.test(l)
         ? l
-        : l.replace(CHORD_TOKEN, (_full, chord: string) => `[${transposeChord(chord, semitones, preferFlats)}]`)
+        : l.replace(
+            CHORD_TOKEN,
+            (_full, chord: string) => `[${transposeChord(toAmericanNotation(chord), semitones, preferFlats)}]`
+          )
     )
     .join("\n");
 }

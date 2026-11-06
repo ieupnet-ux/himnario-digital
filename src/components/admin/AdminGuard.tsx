@@ -119,6 +119,7 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
           ["/admin/canciones", "Canciones"],
           ["/admin/canciones/nueva", "+ Nueva canción"],
           ["/admin/importar", "Importar (Excel / PDF)"],
+          ["/admin/acordes", "Agregar acordes"],
           ["/admin/categorias", "Categorías"],
           ["/admin/usuarios", "Usuarios"],
         ].map(([href, label]) => (

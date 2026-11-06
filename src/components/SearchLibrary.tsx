@@ -2,12 +2,20 @@
 
 import { useMemo, useState } from "react";
 import SongCard from "./SongCard";
-import { ALL_KEYS } from "@/lib/chords";
+import { ALL_KEYS, toAmericanNotation, toNotation } from "@/lib/chords";
 import type { Category, Song } from "@/lib/types";
 
 /** Normaliza texto para buscar sin distinguir mayúsculas ni acentos. */
 function norm(s: string) {
   return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+/** Raíz de una tonalidad (acepta Do Re Mi o C D E): "Rem" → "D", "Sib" → "A#", "Dm" → "D". */
+const ENHARMONIC: Record<string, string> = { Db: "C#", Eb: "D#", Gb: "F#", Ab: "G#", Bb: "A#" };
+function keyRoot(k: string): string {
+  const m = toAmericanNotation((k || "").trim()).match(/^[A-G][#b]?/);
+  if (!m) return "";
+  return ENHARMONIC[m[0]] ?? m[0];
 }
 
 interface Props {
@@ -29,7 +37,7 @@ export default function SearchLibrary({ songs, categories, initialCategory = "" 
     const q = norm(query.trim());
     return songs.filter((s) => {
       if (category && s.category_slug !== category) return false;
-      if (key && !s.key.startsWith(key)) return false;
+      if (key && keyRoot(s.key) !== keyRoot(key)) return false;
       if (author && s.author !== author) return false;
       if (!q) return true;
       // Si escriben solo dígitos, buscar por número de himno
@@ -89,7 +97,7 @@ export default function SearchLibrary({ songs, categories, initialCategory = "" 
             <option value="">Todas las tonalidades</option>
             {ALL_KEYS.map((k) => (
               <option key={k} value={k}>
-                Tono {k}
+                Tono {toNotation(k, "latin")} · {k}
               </option>
             ))}
           </select>

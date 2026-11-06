@@ -97,8 +97,8 @@ export function toAmericanNotation(chord: string): string {
  * Reconocimiento de acordes y secciones
  * ============================================================ */
 
-/** Nota raíz: americana (C–G) o latina (Do, Re, Mi, Fa, Sol, La, Si), con # o b opcional. */
-const ROOT = String.raw`(?:[A-G]|[Dd]o|[Rr]e|[Mm]i|[Ff]a|[Ss]ol|[Ll]a|[Ss]i)[#b]?`;
+/** Nota raíz: americana (C–G) o latina (Do, Re, Mi… en cualquier mayúscula/minúscula: [Rem], [REm], [rem]), con # o b opcional. */
+const ROOT = String.raw`(?:[A-G]|[Dd][Oo]|[Rr][Ee]|[Mm][Ii]|[Ff][Aa]|[Ss][Oo][Ll]|[Ll][Aa]|[Ss][Ii])[#b]?`;
 
 /** Calidad y extensiones: m, maj7, dim, aug, sus4, add9, 7, 9, b5, #11, 5… */
 const QUALITY = String.raw`(?:maj|min|dim|aug|sus|add|m|M|\+|°|ø)?(?:(?:maj|sus|add|dim|aug|[#b+-])?\d{1,2})*`;

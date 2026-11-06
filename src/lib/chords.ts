@@ -6,6 +6,10 @@
  * Al ESCRIBIR se aceptan ambos sistemas: americano ([G], [Em], [Bb]) y
  * latino ([Sol], [Mim], [Sib]). Internamente todo se trata como americano;
  * la notación latina en pantalla es solo de visualización.
+ *
+ * Solo se consideran acordes los corchetes con un acorde REAL (nota + calidad
+ * + extensiones + bajo opcional). Etiquetas como [Coro], [Estribillo] o
+ * [Bridge] no son acordes aunque empiecen con una letra de nota.
  */
 
 const SHARPS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
@@ -90,6 +94,28 @@ export function toAmericanNotation(chord: string): string {
 }
 
 /* ============================================================
+ * Reconocimiento de acordes y secciones
+ * ============================================================ */
+
+/** Nota raíz: americana (C–G) o latina (Do, Re, Mi, Fa, Sol, La, Si), con # o b opcional. */
+const ROOT = String.raw`(?:[A-G]|[Dd]o|[Rr]e|[Mm]i|[Ff]a|[Ss]ol|[Ll]a|[Ss]i)[#b]?`;
+
+/** Calidad y extensiones: m, maj7, dim, aug, sus4, add9, 7, 9, b5, #11, 5… */
+const QUALITY = String.raw`(?:maj|min|dim|aug|sus|add|m|M|\+|°|ø)?(?:(?:maj|sus|add|dim|aug|[#b+-])?\d{1,2})*`;
+
+/** Acorde entre corchetes, con bajo opcional: [G], [Em7], [Sol], [Mim/Si], [Sib], [C#m7b5]. */
+const CHORD_TOKEN = new RegExp(String.raw`\[(${ROOT}${QUALITY}(?:\/${ROOT})?)\]`, "g");
+
+/** Etiqueta de sección: [Coro], [Coro]:, [Coro:], [Estrofa 1], [Puente], [Estribillo]… */
+const SECTION_RE =
+  /^\s*\[(coro|estrofa|verso|puente|final|intro|pre-?coro|estribillo|interludio|instrumental|solo|coda|tag)[^\]]*\]\s*:?\s*$/i;
+
+/** ¿La línea completa es una etiqueta de sección? */
+export function isSectionLine(line: string): boolean {
+  return SECTION_RE.test(line);
+}
+
+/* ============================================================
  * Análisis de letras
  * ============================================================ */
 
@@ -103,11 +129,6 @@ export interface LyricLine {
   segments: LyricSegment[];
   raw: string;
 }
-
-const SECTION_RE = /^\s*\[(coro|estrofa|verso|puente|final|intro|pre-?coro)[^\]]*\]\s*$/i;
-
-/** Acorde entre corchetes: americano ([G], [Em7]) o latino ([Sol], [Mim7], [Sib]). */
-const CHORD_TOKEN = /\[((?:[A-G]|[Dd]o|[Rr]e|[Mm]i|[Ff]a|[Ss]ol|[Ll]a|[Ss]i)[b#]?[^\]\s]*)\]/g;
 
 /** Convierte la letra cruda en líneas con segmentos {acorde, texto}. */
 export function parseLyrics(lyrics: string, semitones = 0): LyricLine[] {
